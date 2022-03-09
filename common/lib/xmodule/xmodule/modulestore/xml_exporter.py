@@ -89,7 +89,7 @@ def _export_drafts(modulestore, course_key, export_fs, xml_centric_course_key):
                 parent = modulestore.get_item(draft_node.parent_location)
 
                 # Don't try to export orphaned items
-                if draft_node.module.location not in parent.children:
+                if not hasattr(parent, 'children') or draft_node.module.location not in parent.children:
                     continue
                 index = parent.children.index(draft_node.module.location)
                 draft_node.module.xml_attributes['index_in_children_list'] = str(index)

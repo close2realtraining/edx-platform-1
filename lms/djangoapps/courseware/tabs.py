@@ -330,7 +330,6 @@ class DatesTab(EnrolledTab):
     title = gettext_noop("Dates")
     priority = 30
     view_name = "dates"
-    is_dynamic = True
 
     def __init__(self, tab_dict):
         def link_func(course, reverse_func):
@@ -367,12 +366,6 @@ def get_course_tab_list(user, course):
             continue
         if tab.type == 'static_tab' and tab.course_staff_only and \
                 not bool(user and has_access(user, 'staff', course, course.id)):
-            continue
-        # We had initially created a CourseTab.load() for dates that ended up
-        # persisting the dates tab to modulestore on Course Run creation, but
-        # ignoring any static dates tab here we can fix forward without
-        # allowing the bug to continue to surface
-        if tab.type == 'dates':
             continue
         course_tab_list.append(tab)
 

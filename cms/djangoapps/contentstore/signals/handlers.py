@@ -51,6 +51,7 @@ def listen_for_course_publish(sender, course_key, **kwargs):  # pylint: disable=
     """
     # import here, because signal is registered at startup, but items in tasks are not yet able to be loaded
     from cms.djangoapps.contentstore.tasks import (
+        reinitialize_course_tabs_task,
         update_outline_from_modulestore_task,
         update_search_index,
         update_special_exams_and_publish
@@ -59,6 +60,9 @@ def listen_for_course_publish(sender, course_key, **kwargs):  # pylint: disable=
     # register special exams asynchronously
     course_key_str = str(course_key)
     update_special_exams_and_publish.delay(course_key_str)
+
+    # Reinitialize course tabs to stay in sync in case there are any updates to the tabs
+    reinitialize_course_tabs_task.delay(course_key_str)
 
     if key_supports_outlines(course_key):
         # Push the course outline to learning_sequences asynchronously.

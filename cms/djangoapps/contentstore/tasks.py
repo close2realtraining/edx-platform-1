@@ -5,10 +5,10 @@ This file contains celery tasks for contentstore views
 import base64
 import json
 import os
-import shutil  # lint-amnesty, pylint: disable=wrong-import-order
-import tarfile  # lint-amnesty, pylint: disable=wrong-import-order
-from datetime import datetime  # lint-amnesty, pylint: disable=wrong-import-order
-from tempfile import NamedTemporaryFile, mkdtemp  # lint-amnesty, pylint: disable=wrong-import-order
+import shutil
+import tarfile
+from datetime import datetime
+from tempfile import NamedTemporaryFile, mkdtemp
 
 import olxcleaner
 import pkg_resources
@@ -17,7 +17,6 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User  # lint-amnesty, pylint: disable=imported-auth-user
 from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
 from django.test import RequestFactory
@@ -57,11 +56,12 @@ from openedx.core.lib.extract_tar import safetar_extractall
 from xmodule.contentstore.django import contentstore  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.course_module import CourseFields  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.exceptions import SerializationError  # lint-amnesty, pylint: disable=wrong-import-order
-from xmodule.modulestore import COURSE_ROOT, LIBRARY_ROOT  # lint-amnesty, pylint: disable=wrong-import-order
+from xmodule.modulestore import COURSE_ROOT, LIBRARY_ROOT, ModuleStoreEnum  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.django import modulestore  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.exceptions import DuplicateCourseError, InvalidProctoringProvider, ItemNotFoundError  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.xml_exporter import export_course_to_xml, export_library_to_xml  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.xml_importer import CourseImportException, import_course_from_xml, import_library_from_xml  # lint-amnesty, pylint: disable=wrong-import-order
+from xmodule.tabs import CourseTabList, InvalidTabsException  # lint-amnesty, pylint: disable=wrong-import-order
 
 from .outlines import update_outline_from_modulestore
 from .outlines_regenerate import CourseOutlineRegenerate
@@ -799,3 +799,30 @@ def handle_course_import_exception(courselike_key, exception, status, known=True
 
     if status.state != UserTaskStatus.FAILED:
         status.fail(task_fail_message)
+
+
+@shared_task
+@set_code_owner_attribute
+def reinitialize_course_tabs_task(course_key_str: str):
+    """
+    Celery task that reinitializes course tabs.
+
+    Only updates if a change is detected.
+    """
+    requires_update = False
+    course_key = CourseKey.from_string(course_key_str)
+    store = modulestore()
+    with store.bulk_operations(course_key, emit_signals=False):
+        course = store.get_course(course_key, depth=1)
+        existing_tabs = {tab.type for tab in course.tabs}
+        try:
+            CourseTabList.initialize_default(course)
+            new_tabs = {tab.type for tab in course.tabs}
+            requires_update = existing_tabs != new_tabs
+        except InvalidTabsException as err:
+            LOGGER.exception('{err} for course: [{course_id}]'.format(
+                err=str(err), course_id=str(course.id)
+            ))
+
+    if requires_update:
+        store.update_item(course, ModuleStoreEnum.UserID.system)
