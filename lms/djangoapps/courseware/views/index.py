@@ -51,6 +51,8 @@ from xmodule.course_module import COURSE_VISIBILITY_PUBLIC
 from xmodule.modulestore.django import modulestore
 from xmodule.x_module import PUBLIC_VIEW, STUDENT_VIEW
 
+from openedx.features.course_experience.utils import get_course_outline_block_tree
+
 from ..access import has_access
 from ..access_utils import check_public_access
 from ..courses import get_course_with_access, get_current_child, get_studio_url
@@ -118,8 +120,11 @@ class CoursewareIndex(View):
         self.original_section_url_name = section
         self.chapter_url_name = chapter
         self.section_url_name = section
-        self.position = position
-        self.chapter, self.section = None, None
+        # self.position = position
+        # self.chapter, self.section = None, None
+        self.vertical_url_name = ''
+        self.position = position if position else 1
+        self.chapter, self.section, self.vertical = None, None, None
         self.course = None
         self.url = request.path
 
@@ -221,6 +226,7 @@ class CoursewareIndex(View):
             self._reset_section_to_exam_if_required()
             self.chapter = self._find_chapter()
             self.section = self._find_section()
+            self.vertical = self._find_vertical()
 
             if self.chapter and self.section:
                 self._redirect_if_not_requested_section()
@@ -359,6 +365,16 @@ class CoursewareIndex(View):
         if self.chapter:
             return self._find_block(self.chapter, self.section_url_name, 'section')
 
+    def _find_vertical(self):
+        """
+        Finds the requested vertical(unit).
+        """
+        if self.section:
+            for position, child in enumerate(self.section.children, start=1):
+                if position == self.position:
+                    self.vertical_url_name = child.block_id
+                    return self._find_block(self.section, self.vertical_url_name, 'vertical')
+
     def _prefetch_and_bind_course(self, request):
         """
         Prefetches all descendant data for the requested section and
@@ -418,6 +434,8 @@ class CoursewareIndex(View):
 
         course_url_name = default_course_url_name(self.course.id)
         course_url = reverse(course_url_name, kwargs={'course_id': str(self.course.id)})
+        if self.position == None:
+            self.position = 1
         show_search = (
             settings.FEATURES.get('ENABLE_COURSEWARE_SEARCH') or
             (settings.FEATURES.get('ENABLE_COURSEWARE_SEARCH_FOR_COURSE_STAFF') and self.is_staff)
@@ -446,6 +464,11 @@ class CoursewareIndex(View):
             'disable_accordion': not DISABLE_COURSE_OUTLINE_PAGE_FLAG.is_enabled(self.course.id),
             'show_search': show_search,
             'render_course_wide_assets': True,
+            'courseware_index': get_course_outline_block_tree(self.request, unicode(self.course.id)),
+            'chapter_url_name': self.chapter_url_name,                           
+            'section_url_name': self.section_url_name,                           
+            'position':self.position -1,
+            'open':request.GET.get('open')
         }
         courseware_context.update(
             get_experiment_user_metadata_context(
@@ -492,7 +515,12 @@ class CoursewareIndex(View):
                 table_of_contents['previous_of_active_section'],
                 table_of_contents['next_of_active_section'],
             )
-            courseware_context['fragment'] = self.section.render(self.view, section_context)
+            # courseware_context['fragment'] = self.section.render(self.view, section_context)
+            # if requested valid vertical then render vertical only else render complete subsection named as self.section here
+            if self.vertical:
+                courseware_context['fragment'] = self.vertical.render(STUDENT_VIEW, section_context)
+            else:
+                courseware_context['fragment'] = self.section.render(STUDENT_VIEW, section_context)
 
             if self.section.position and self.section.has_children:
                 self._add_sequence_title_to_context(courseware_context)

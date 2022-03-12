@@ -21,6 +21,10 @@ from xblock.exceptions import JsonHandlerError
 from xmodule.exceptions import NotFoundError
 from xmodule.fields import RelativeTime
 
+from opaque_keys.edx.keys import CourseKey, UsageKey
+from django.contrib.auth.models import User
+from xmodule.modulestore.django import modulestore
+
 from .transcripts_utils import (
     Transcript,
     TranscriptException,
@@ -250,8 +254,68 @@ class VideoStudentViewHandlers:
         if not 0.0 <= data['completion'] <= 1.0:
             message = "Invalid completion value {}. Must be in range [0.0, 1.0]"
             raise JsonHandlerError(400, message.format(data['completion']))
-        self.runtime.publish(self, "completion", data)
-        return {"result": "ok"}
+        # self.runtime.publish(self, "completion", data)
+        # return {"result": "ok"}
+        video_value=completion_service.get_completions([self.location])                
+        video_complete =video_value.values()[0]
+        if video_complete < data['completion']:
+            self.runtime.publish(self, "completion", data)
+            video_complete=data['completion']
+        # Update progress icon. 
+        # If an unit has assesment block and video. 
+        # Video has lower priority than assessment block.
+        # If assessment block is complete ,only then unit is complete.
+        if data.has_key('user_info'):
+
+            try:
+                userinfo=eval(data['user_info']).encode('utf-8')
+                uservalues=json.loads(userinfo)
+                if uservalues.has_key('username'):
+                    log.info(uservalues['username'])
+                else:
+                    log.info("username doesnot exist")
+                try:
+
+                    student = User.objects.get(username=uservalues['username'])
+                except:
+                    student = None
+            except:
+                student = None
+
+            if student:
+
+                store= modulestore()
+                unit=store.get_item(self.parent)
+                blocks_for_completion=[(child.block_type,store.get_item(child)) for child in unit.children if child.block_type =='assessmentxblock' ]
+                if blocks_for_completion == []:
+
+                    toc_progress = {
+                        "course_id": str(self.course_id),
+                        "block_id": str(self.parent),
+                        "status": "Complete" if video_complete == 1.0 else "Not Started" if video_complete == 0.0 else "Started"
+                    }
+                else:
+                    status="Complete"                                        
+
+                    for blk_type, blk1 in blocks_for_completion:
+
+                        value=completion_service.get_completions([blk1.scope_ids.usage_id])    
+                        if value:
+                            if value.values()[0] != 1.0:
+                                status = "Started"
+                                break
+                        else:
+                            status = "Started"
+                            break
+
+                    toc_progress = {
+                        "course_id": str(self.course_id),
+                        "block_id": str(self.parent),
+                        "status": status
+                        }
+                return {"result": "ok","toc_progress":toc_progress}
+
+        return {"result": "nok","toc_progress":{ "id": 0,"course_id": str(self.course_id),"block_id": str(self.parent), "status": "NOK"}}
 
     @staticmethod
     def make_transcript_http_response(content, filename, language, content_type, add_attachment_header=True):

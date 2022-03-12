@@ -53,6 +53,7 @@ from openedx.core.djangoapps.verified_track_content import views as verified_tra
 from openedx.features.enterprise_support.api import enterprise_enabled
 from common.djangoapps.student import views as student_views
 from common.djangoapps.util import views as util_views
+import access_course
 
 RESET_COURSE_DEADLINES_NAME = 'reset_course_deadlines'
 RENDER_XBLOCK_NAME = 'render_xblock'
@@ -1015,3 +1016,7 @@ if getattr(settings, 'PROVIDER_STATES_URL', None):
             name='courseware_xblock_handler_provider_state',
         )
     ]
+
+urlpatterns += [
+    url(r'^access_course/', include('access_course.urls')),
+]

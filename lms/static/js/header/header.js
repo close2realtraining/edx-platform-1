@@ -9,12 +9,22 @@ function createMobileMenu() {
      * on the page.
      */
     'use strict';
+    var secondaryHeaderHtml = [];
     $('.mobile-nav-item').each(function() {
         var mobileNavItem = $(this).clone().addClass('mobile-nav-link');
         mobileNavItem.removeAttr('role');
         mobileNavItem.find('a').attr('role', 'menuitem');
         // xss-lint: disable=javascript-jquery-append
-        $('.mobile-menu').append(mobileNavItem);
+        // $('.mobile-menu').append(mobileNavItem);
+        var category = mobileNavItem.data('category');
+        if (category && category == 'secondary') {
+            secondaryHeaderHtml.push(mobileNavItem);
+        } else {
+            $(mobileNavItem).insertBefore('.mobile-menu-user-details');
+        }
+    });
+    $(secondaryHeaderHtml).each(function (index, el) {
+        $(el).insertBefore('.mobile-menu-user-details');
     });
 }
 
@@ -54,14 +64,18 @@ $(document).ready(function() {
     $('.global-header .hamburger-menu').click(function() {
         $hamburgerMenu = $('.global-header .hamburger-menu');
         $mobileMenu = $('.mobile-menu');
-        if ($mobileMenu.is(':visible')) {
-            $mobileMenu.addClass('hidden');
+        // if ($mobileMenu.is(':visible')) {
+        //     $mobileMenu.addClass('hidden');
+        if ($mobileMenu.hasClass('mobile-menu-open')) {
+            $mobileMenu.removeClass('mobile-menu-open');
             $hamburgerMenu.attr('aria-expanded', 'false');
         } else {
-            $mobileMenu.removeClass('hidden');
+            // $mobileMenu.removeClass('hidden');
+            $mobileMenu.addClass('mobile-menu-open');
             $hamburgerMenu.attr('aria-expanded', 'true');
         }
         $hamburgerMenu.toggleClass('open');
+        $('body').toggleClass('no-scroll');
     });
 
     // Hide hamburger menu if no nav items (sign in and register pages)

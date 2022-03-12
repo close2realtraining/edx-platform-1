@@ -8,16 +8,20 @@
     id="input_${id}"
     value="${value}"
   />
-  <div style="position:relative;">
+  <div id="spinner_imageinput_${id}" class="fa fa-spinner fa-spin"></div>
+  <div id="div_imageinput_${id}" style="position:relative;">
     <div
       id="imageinput_${id}"
       style="
         background-image: url('${src}');
+        background-repeat: no-repeat;
+        background-size: contain;
         width: ${width}px;
         height: ${height}px;
         position: relative;
         left: 0;
         top: 0;"
+      class="hide"
     >
       <img
         src="${STATIC_URL}images/green-pointer.png"
@@ -34,6 +38,7 @@
         position: absolute;
         left: 0;
         top: 0;"
+      class="hide"
     ></div>
   </div>
 

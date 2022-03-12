@@ -98,11 +98,115 @@
                 }
             },
 
+            // Start Hariom : ET-183_TOC_changes
+            started : "fa-check-partially-circle",
+            complete : "fa-check-circle",
+
+            get_subsection_progress: function(current_unit) {
+                var that = this;
+                var status;
+                var current_unit_siblings = current_unit.siblings();
+                if (current_unit_siblings.length != 0){
+                    current_unit_siblings.each(function () {
+                        var this_icon = $(this).children("a").children("button.last-level-title").children("span.complete-checkmark");
+                        if (this_icon.hasClass(that.complete)) {
+                            status = that.complete;
+                            return true;
+                        } else {
+                            status = that.started;
+                            return false;
+                        }
+                    });
+                } else {
+                    status = that.complete;
+                }
+                return status;
+            },
+
+            get_section_progress: function(current_subsection, current_subsection_progress){
+                var that = this;
+                var status;
+                var current_subsection_siblings = current_subsection.siblings();
+                if (current_subsection_siblings.length != 0){
+                    current_subsection_siblings.each(function () {
+                        var this_icon = $(this).children("button.subsection-text.accordion-trigger").children("span.complete-checkmark");
+                        if (this_icon.hasClass(that.complete)) {
+                            status = that.complete;
+                            return true;
+                        } else {
+                            status = that.started;
+                            return false;
+                        }
+                    });
+                } else {
+                    // if subsection has no sibling i.e. section has only one subsection then section's progress = subsection's progress
+                    status = current_subsection_progress;
+                }
+                return status;
+            },
+
+            updateTOCProgressIcon: function (toc_progress) {
+                var that = this;
+
+
+
+                var unit_progress, subsection_progress, section_progress;
+                unit_progress = subsection_progress = section_progress = '';
+
+                var active_unit, active_unit_atag, active_unit_id, active_unit_icon;
+                var active_subsection, active_subsection_icon, active_section, active_section_icon;
+
+                active_unit = $("li.vertical.current");
+                active_unit_atag = active_unit.find("a.outline-item.focusable.clearfix");
+                active_unit_id = active_unit_atag.attr("id");
+                active_unit_icon = active_unit_atag.find("button.last-level-title.current span.complete-checkmark")
+
+                active_subsection = $("li.subsection.current");
+                active_subsection_icon = active_subsection.find("button.subsection-text.accordion-trigger span.complete-checkmark");
+
+                active_section = $("li.section.current");
+                active_section_icon = active_section.find("button.section-name.accordion-trigger span.complete-checkmark");
+
+                if (active_unit_id == toc_progress['block_id']){
+                    // get progress for unit, subsection, section
+                    if (toc_progress["status"] == "Started"){
+                        unit_progress = that.started
+                        subsection_progress = that.started
+                        section_progress = that.started
+                    } else if (toc_progress["status"] == "Complete"){
+                        unit_progress = that.complete
+                        // If all the sibling units are complete -> update subsection = complete else started
+                        subsection_progress = that.get_subsection_progress(active_unit)
+                        // If all the sibling subsections are complete -> update section = complete else subsection_progress
+                        section_progress = that.get_section_progress(active_subsection, subsection_progress)
+                    }
+                    // update progress icon
+
+                    if (unit_progress != ''){
+                        active_unit_icon.addClass(unit_progress)
+                    }
+
+                    if (subsection_progress != ''){
+                        active_subsection_icon.addClass(subsection_progress)
+                    }
+
+                    if (section_progress != ''){
+                        active_section_icon.addClass(section_progress)
+                    }
+                };
+
+            },
+            // End Hariom : ET-183_TOC_changes
+
             saveState: function(async, data) {
+                var that = this;
                 if (this.state.config.saveStateEnabled) {
                     if (!($.isPlainObject(data))) {
                         data = {
-                            saved_video_position: this.state.videoPlayer.currentTime
+                            // saved_video_position: this.state.videoPlayer.currentTime
+                            completion_time: this.state.completionHandler.completeAfterTime,
+                            saved_video_position: this.state.videoPlayer.currentTime,
+                            user_info: $.cookie("edx-user-info")
                         };
                     }
 
@@ -120,8 +224,68 @@
                         type: 'POST',
                         async: !!async,
                         dataType: 'json',
-                        data: data
+                        data: data,
+                        // Start Hariom : ET-183_TOC_changes
+                        success: function success(responseData) {
+
+                        }
+                        // End Hariom : ET-183_TOC_changes
                     });
+
+                    function getSeconds(custime){
+                        var ar=custime.split(":")
+                        ar=ar.reverse()
+                        var secs=0
+                        var i;
+                        for (i=0; i < ar.length; i++){
+                            secs+=Math.pow(60,i)*ar[i]
+                        }
+                        return secs
+                    }
+                    var complete=0.0;
+                    if ((data.saved_video_position > "00:00:00") && (this.state.config.publishCompletionUrl)) {
+                        var block_id=this.state.config.publishCompletionUrl.split("/")[4];
+                        var endt=$("[data-id='"+block_id+"']").find(".vidtime")[0].textContent.split(" / ")[1];
+                        var duration=getSeconds(endt); 
+                        var visited=getSeconds(data.saved_video_position);  
+                        // var completeaftertime = 22;
+                        if (!this.state.completionHandler.completeAfterTime)
+                            var completeaftertime=this.state.completionHandler.calculateCompleteAfterTime(this.state.completionHandler.startTime, duration)    
+                        else
+                        var completeaftertime= this.state.completionHandler.completeAfterTime; 
+                        if (visited > completeaftertime){
+                            complete=1.0
+                        }
+                        else {
+                            if (visited > 0){
+                                complete=0.5
+                            }
+                        }
+                        $.ajax({
+                            type: 'POST',
+                            url: this.state.config.publishCompletionUrl,
+                            contentType: 'application/json',
+                            dataType: 'json',
+                            data: JSON.stringify({completion: complete,user_info: $.cookie("edx-user-info")}),
+                            success: function(responseData) {
+                                if (complete == 1.0){
+                                self.state.el.off('timeupdate.completion');
+                                self.state.el.off('ended.completion');
+                                }
+                                that.updateTOCProgressIcon(responseData["toc_progress"])
+                            },       
+                            error: function(xhr) {
+                                /* eslint-disable no-console */
+                                self.state.completionHandler.complete = false;
+                                var errmsg = 'Failed to submit completion';
+                                if (xhr.responseJSON !== undefined) {
+                                    errmsg += ': ' + xhr.responseJSON.error;
+                                }
+                                console.warn(errmsg);
+                                /* eslint-enable no-console */
+                            }
+                        });
+                    }                
                 }
             }
         };

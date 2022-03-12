@@ -55,8 +55,8 @@ class CourseOutlineFragmentView(EdxFragmentView):
 
         resume_block = get_resume_block(course_block_tree) if user_is_enrolled else None
 
-        if not resume_block:
-            self.mark_first_unit_to_resume(course_block_tree)
+        # if not resume_block:
+        #     self.mark_first_unit_to_resume(course_block_tree)
 
         xblock_display_names = self.create_xblock_id_and_name_dict(course_block_tree)
         gated_content = self.get_content_milestones(request, course_key)

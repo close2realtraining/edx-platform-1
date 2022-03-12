@@ -2513,3 +2513,28 @@ TEAMS_HELP_URL = "https://edx.readthedocs.io/projects/open-edx-building-and-runn
 TEXTBOOKS_HELP_URL = "https://edx.readthedocs.io/projects/open-edx-building-and-running-a-course/en/latest/course_assets/textbooks.html"
 WIKI_HELP_URL = "https://edx.readthedocs.io/projects/open-edx-building-and-running-a-course/en/latest/course_assets/course_wiki.html"
 CUSTOM_PAGES_HELP_URL = "https://edx.readthedocs.io/projects/open-edx-building-and-running-a-course/en/latest/course_assets/pages.html#adding-custom-pages"
+
+############### Settings for BOP Configuration ##################
+# Initialize to "", but read from JSON in aws.py
+BOP_CONFIGURATION = {
+    "ENABLE_ACCESS_COURSE_MIDDLEWARE": False,
+    "WRDPRS_COOKIE_NAME": "",
+    "WRDPRS_LOGIN_URL": "",
+    "API_TOKEN_VERIFY": "",
+    "API_TOKEN_REFRESH": "",
+    "SYSTEM_TOKEN": "",
+    "API_COURSE_PROGRESS": "",
+    "API_FETCH_USERDETAILS": "",
+    "ADMIN_SYSTEM_TOKEN": "",
+    "API_FETCH_COURSEDETAILS": "",
+    "API_FETCH_USERPERMISSIONS": ""
+}
+
+############### Settings for EKG Analytics Configuration ##################
+# Initialize, but read from JSON in aws.py
+EKG_ANALYTIC_CONFIGURATION = {
+  "ENABLE_TRACKING": False,
+  "API_CREATE_LEARNER": "",
+  "API_CREATE_EVENT": "",
+  "API_TOKEN": ""
+}

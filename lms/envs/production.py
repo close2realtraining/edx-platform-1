@@ -1053,3 +1053,23 @@ SHOW_ACCOUNT_ACTIVATION_CTA = ENV_TOKENS.get('SHOW_ACCOUNT_ACTIVATION_CTA', SHOW
 CHROME_DISABLE_SUBFRAME_DIALOG_SUPPRESSION_TOKEN = ENV_TOKENS.get(
     'CHROME_DISABLE_SUBFRAME_DIALOG_SUPPRESSION_TOKEN', CHROME_DISABLE_SUBFRAME_DIALOG_SUPPRESSION_TOKEN
 )
+
+############### Settings for BOP Configuration ##################
+BOP_CONFIGURATION = ENV_TOKENS.get('BOP_CONFIGURATION', BOP_CONFIGURATION)
+
+############### Settings for EKG Analytics ##################
+EKG_ANALYTIC_CONFIGURATION = ENV_TOKENS.get('EKG_ANALYTIC_CONFIGURATION', EKG_ANALYTIC_CONFIGURATION)
+
+############### Initializing sentry.io ##################
+SENTRYIO = ENV_TOKENS.get('SENTRYIO_DSN', None)
+
+if SENTRYIO:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRYIO,
+        integrations=[DjangoIntegration()]
+    )
+
+SENTRY_JS_DSN = ENV_TOKENS.get('SENTRY_JS_DSN', None)

@@ -251,6 +251,9 @@ class LmsBlockMixin(XBlockMixin):
         """
         Publish completion data from the front end.
         """
+        # Added ignore of problem type in completion. It is managed by assessment xblock
+        if str(self.location).find("type@problem+block@") != -1:
+            return {'result': 'ok'}
         completion_service = self.runtime.service(self, 'completion')
         if completion_service is None:  # lint-amnesty, pylint: disable=no-else-raise
             raise JsonHandlerError(500, "No completion service found")

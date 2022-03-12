@@ -80,6 +80,13 @@ def delete_logged_in_cookies(response):
             path='/',
             domain=settings.SHARED_COOKIE_DOMAIN
         )
+    
+    if hasattr(settings, 'BOP_CONFIGURATION'):
+        response.delete_cookie(
+            settings.BOP_CONFIGURATION.get('WRDPRS_COOKIE_NAME', '').encode('utf-8'),
+            path='/',
+            domain=settings.SESSION_COOKIE_DOMAIN
+        )
 
     return response
 

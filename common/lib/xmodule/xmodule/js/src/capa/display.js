@@ -633,15 +633,24 @@
         Problem.prototype.submit_internal = function() {
             var that = this;
             Logger.log('problem_check', this.answers);
+            var wrapper = $('.xblock-student_view .slider');
             return $.postWithPrefix('' + this.url + '/problem_check', this.answers, function(response) {
                 switch (response.success) {
                 case 'submitted':
                 case 'incorrect':
                 case 'correct':
                     window.SR.readTexts(that.get_sr_status(response.contents));
-                    that.el.trigger('contentChanged', [that.id, response.contents, response]);
+                    // that.el.trigger('contentChanged', [that.id, response.contents, response]);
                     that.render(response.contents, that.focus_on_submit_notification);
                     that.updateProgress(response);
+                    if (wrapper.hasClass("knowledge_acquisition") || wrapper.hasClass("training")) {
+                        try {
+                            that.show();
+                        } catch (e) {
+                            console.error("Error in displaying ans", e);
+                        }
+                    }
+                    that.el.trigger('contentChanged', [that.id, response.contents, response]);
                     break;
                 default:
                     that.saveNotification.hide();
@@ -697,9 +706,10 @@
                 id: this.id
             }, function(response) {
                 if (response.success) {
-                    that.el.trigger('contentChanged', [that.id, response.html, response]);
+                    // that.el.trigger('contentChanged', [that.id, response.html, response]);
                     that.render(response.html, that.scroll_to_problem_meta);
                     that.updateProgress(response);
+                    that.el.trigger('contentChanged', [that.id, response.html, response]);
                     return window.SR.readText(gettext('This problem has been reset.'));
                 } else {
                     return that.gentle_alert(response.msg);
@@ -802,7 +812,7 @@
                 var saveMessage;
                 saveMessage = response.msg;
                 if (response.success) {
-                    that.el.trigger('contentChanged', [that.id, response.html, response]);
+                    // that.el.trigger('contentChanged', [that.id, response.html, response]);
                     edx.HtmlUtils.setHtml(
                         that.el.find('.notification-save .notification-message'),
                         edx.HtmlUtils.HTML(saveMessage)
@@ -811,6 +821,8 @@
                     that.el.find('.wrapper-problem-response .message').hide();
                     that.saveNotification.show();
                     that.focus_on_save_notification();
+                    that.el.trigger('contentChanged', [that.id, response.html, response]);
+            
                 } else {
                     that.gentle_alert(saveMessage);
                 }
@@ -880,7 +892,8 @@
             answered = true;
             atLeastOneTextInputFound = false;
             oneTextInputFilled = false;
-            this.el.find('input:text').each(function(i, textField) {
+            // this.el.find('input:text').each(function(i, textField) {
+                this.el.find('input:text:not(.not-ans)').each(function(i, textField) {
                 if ($(textField).is(':visible')) {
                     atLeastOneTextInputFound = true;
                     if ($(textField).val() !== '') {
@@ -1183,9 +1196,44 @@
                 } else {
                     console.log('Canvas is not supported.'); // eslint-disable-line no-console
                 }
-                context.fillStyle = 'rgba(255,255,255,.3)';
-                context.strokeStyle = '#FF0000';
-                context.lineWidth = '2';
+                // context.fillStyle = 'rgba(255,255,255,.3)';
+                // context.strokeStyle = '#FF0000';
+                // context.lineWidth = '2';
+                context.fillStyle = 'rgba(255,255,255,0)';
+
+                if ($(".assessment-block").hasClass("knowledge_acquisition") || $(".assessment-block").hasClass("training")) {
+                    context.strokeStyle = '#9bc31e';
+
+                    var problemWrapper = $('#problem_' + id.split('_')[0]);
+                    var imgWrapper = $element.find('#imageinput_' + id);
+                    var correctIcon = "/static/ekgtraining/images/correct.png";
+                    var imgPath = '/static/ekgtraining/images/wrong.png';
+
+                    if (problemWrapper.length) {
+                        if (problemWrapper.hasClass('correct')) {
+                            imgPath = correctIcon;
+                            imgWrapper.find('img').attr('src', imgPath);
+                        } else if (problemWrapper.hasClass('wrong')) {
+                            imgWrapper.find('img').attr('src', imgPath);
+                        }
+                    }
+
+                    $('.xblock-student_view .slider .vert-mod').on("assessment_block:updated", function () {
+                        problemWrapper = $('#problem_' + id.split('_')[0]);
+
+                        if (problemWrapper.length && problemWrapper.hasClass('correct')) {
+                            imgPath = correctIcon;
+                        }
+
+                        if (imgWrapper.length) {
+                            imgWrapper.find('img').attr('src', imgPath);
+                        }
+                    })
+                } else {
+                    context.strokeStyle = '#525252';
+                }
+
+                context.lineWidth = '5';
                 if (answers[id]) {
                     $.each(answers[id], function(key, value) {
                         if ((types[key] !== null && types[key] !== undefined) && value) {

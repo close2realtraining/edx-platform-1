@@ -410,6 +410,19 @@ def jump_to(request, course_id, location):
     "new" or "legacy" to force either a Micro-Frontend or Legacy-LMS redirect
     link to be generated, respectively.
     """
+    param_to_add=""
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    print(_request.GET.get('open'))
+    if _request.GET.get('open'):
+        print("inside if")
+        from_toc=_request.GET.get('open')
+        print("from_toc: "+from_toc)
+        print(type(from_toc))
+        if from_toc == u'1':
+            param_to_add="&open=1"
+    else:
+        from_toc= None
+        param_to_add=""
     try:
         course_key = CourseKey.from_string(course_id)
         usage_key = UsageKey.from_string(location).replace(course_key=course_key)
@@ -429,7 +442,7 @@ def jump_to(request, course_id, location):
             usage_key=usage_key,
             request=request,
             experience=experience,
-        )
+        ) + param_to_add
     except (ItemNotFoundError, NoPathToItem):
         # We used to 404 here, but that's ultimately a bad experience. There are real world use cases where a user
         # hits a no-longer-valid URL (for example, "resume" buttons that link to no-longer-existing block IDs if the

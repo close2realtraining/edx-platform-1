@@ -113,11 +113,11 @@ urlpatterns = [
         AccountDeactivationView.as_view(),
         name='accounts_deactivation'
     ),
-    url(
-        r'^v1/accounts/deactivate_logout/$',
-        DeactivateLogoutView.as_view(),
-        name='deactivate_logout'
-    ),
+    # url(
+    #     r'^v1/accounts/deactivate_logout/$',
+    #     DeactivateLogoutView.as_view(),
+    #     name='deactivate_logout'
+    # ),
     url(
         r'^v1/accounts/name_change/$',
         NameChangeView.as_view(),

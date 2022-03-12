@@ -202,6 +202,17 @@ class ProblemBlock(
         # use display_name_with_default for those
         default=_("Blank Advanced Problem")
     )
+    #Added for customization to Include ECG Image Toolbar
+    ecg_image_toolbar = Integer(
+        display_name=_("ECG Image Toolbar"),
+        help=_("Display Image Tool bar to add Zoom,Scale and QT Interval Calculator for images within description of the problem."),
+        default=1,
+        scope=Scope.settings,
+        values=[
+            {"display_name": _("Yes"), "value": 1},
+            {"display_name": _("No"), "value": 0},
+        ]
+    )
     attempts = Integer(
         help=_("Number of attempts taken by the student on this problem"),
         default=0,
@@ -825,6 +836,7 @@ class ProblemBlock(
             seed=self.get_seed(),
             capa_system=capa_system,
             capa_module=self,  # njp
+            image_toolbar=self.ecg_image_toolbar
         )
 
     def get_state_for_lcp(self):

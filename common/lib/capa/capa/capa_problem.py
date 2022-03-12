@@ -37,6 +37,9 @@ from capa.util import contextualize_text, convert_files_to_filenames, get_course
 from openedx.core.djangolib.markup import HTML, Text
 from openedx.core.lib.edx_six import get_gettext
 from xmodule.stringify import stringify_children
+import access_course
+from django.conf import settings
+import requests
 
 # extra things displayed after "show answers" is pressed
 solution_tags = ['solution']
@@ -133,7 +136,7 @@ class LoncapaProblem(object):
     Main class for capa Problems.
     """
     def __init__(self, problem_text, id, capa_system, capa_module,  # pylint: disable=redefined-builtin
-                 state=None, seed=None, minimal_init=False, extract_tree=True):
+                 state=None, seed=None, minimal_init=False, extract_tree=True, image_toolbar=0):
         """
         Initializes capa Problem.
 
@@ -162,6 +165,7 @@ class LoncapaProblem(object):
         self.problem_id = id
         self.capa_system = capa_system
         self.capa_module = capa_module
+        self.image_toolbar = image_toolbar
 
         state = state or {}
 
@@ -181,6 +185,42 @@ class LoncapaProblem(object):
         # Convert startouttext and endouttext to proper <text></text>
         problem_text = re.sub(r"startouttext\s*/", "text", problem_text)
         problem_text = re.sub(r"endouttext\s*/", "/text", problem_text)
+        self.problem_text = problem_text
+
+        ques_tree=etree.fromstring(problem_text)
+        description_node=ques_tree.find(".//description")
+
+        # default ecg image metadata value for ecg toolbar problems
+        time_1_second_in_pixels = str(settings.BOP_CONFIGURATION['DEFAULT_METADATA_INFO']['TIME_1_SECOND_IN_PIXELS'])
+        voltage_1_volt_in_pixels = str(settings.BOP_CONFIGURATION['DEFAULT_METADATA_INFO']['VOLTAGE_1_VOLT_IN_PIXELS'])
+
+        # Enable ECG Image toolbar if image is within description node and metdata is available for image
+        # Toolbar should be only for learner view, which is decided by settings.ROOT_URLCONF
+        if self.image_toolbar and description_node is not None and settings.ROOT_URLCONF == 'lms.urls':
+            imgs_for_toolbar=[]
+            img_list=[ (elem, elem.get("src")) if elem.tag=="img" else None  for elem in description_node.iterchildren() ]
+            for elem, src in img_list:
+                class_list = elem.get("class")
+                if  class_list is None:
+                    imgs_for_toolbar.append((elem,src))
+                elif class_list.find("measure_img") == -1:
+                    imgs_for_toolbar.append((elem,src))
+                else:
+                    self.image_toolbar = 1
+            if len(imgs_for_toolbar) > 0:
+                self.image_toolbar = 1
+                image_text = problem_text
+                changes = False
+                for image_elem,src in imgs_for_toolbar:
+                    image_elem.set("data-time_1_second_in_pixels", time_1_second_in_pixels)
+                    image_elem.set("data-voltage_1_volt_in_pixels", voltage_1_volt_in_pixels)
+                    image_elem.set("class", "hide measure_img")
+                    if not changes:
+                        changes =True
+
+                if changes:
+                    problem_text=etree.tostring(ques_tree,encoding='utf8', method='xml')
+
         self.problem_text = problem_text
 
         # parse problem XML file into an element tree
